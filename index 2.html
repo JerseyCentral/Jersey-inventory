@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Jersey Inventory</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111}.wrap{max-width:650px;margin:auto;padding:18px}
+h1{font-size:30px;margin:5px 0}.sub{color:#666;margin-bottom:16px}.card{background:#fff;border-radius:17px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #00000010}
+input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:11px;font-size:16px;margin:5px 0 10px;background:#fff}button{border:0;border-radius:11px;padding:10px 15px;font-size:17px;background:#111;color:#fff}.add{width:100%;margin-top:2px}
+.total{text-align:center;font-size:25px;font-weight:750}.jersey{font-size:19px;font-weight:700;margin-bottom:10px}.size{display:flex;align-items:center;gap:8px;margin:7px 0}.size-label{flex:1;font-weight:600}.qty{min-width:38px;text-align:center;font-size:19px}.small{background:#eee;color:#111;padding:7px 14px}.remove{margin-top:10px;background:#eee;color:#c00;font-size:13px;padding:6px 9px}.empty{text-align:center;color:#777;padding:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🏈 Jersey Inventory</h1><div class="sub">Track your jerseys by size & color.</div>
+<div class="card">
+<input id="jerseyName" placeholder="Jersey / player (e.g. C. Downs)">
+<select id="jerseySize"><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option><option>Other</option></select>
+<select id="jerseyColor"><option>Black</option><option>White</option><option>Red</option><option>Blue</option><option>Navy</option><option>Green</option><option>Gold</option><option>Gray</option><option>Purple</option><option>Orange</option><option>Pink</option><option>Other</option></select>
+<input id="jerseyQty" type="number" min="1" step="1" value="1" inputmode="numeric" placeholder="Quantity">
+<button class="add" id="addButton">Add Jersey</button>
+</div>
+<div class="card total">Total Jerseys: <span id="total">0</span></div>
+<div id="list"></div>
+</div>
+<script>
+const STORAGE='jerseyInventoryFinal';
+let data=JSON.parse(localStorage.getItem(STORAGE)||'[]');
+
+function save(){localStorage.setItem(STORAGE,JSON.stringify(data));render();}
+function add(){
+ const n=document.getElementById('jerseyName').value.trim();
+ const s=document.getElementById('jerseySize').value;
+ const c=document.getElementById('jerseyColor').value;
+ const q=Math.max(1,parseInt(document.getElementById('jerseyQty').value,10)||1);
+ if(!n){alert('Enter a jersey or player name first.');return;}
+ let x=data.find(a=>a.name.toLowerCase()===n.toLowerCase());
+ if(!x){x={name:n,items:{}};data.push(x);}
+ const key=s+'|'+c;
+ x.items[key]=(x.items[key]||0)+q;
+ document.getElementById('jerseyName').value='';
+ document.getElementById('jerseyQty').value='1';
+ save();
+}
+function change(i,key,d){
+ if(!data[i]||!data[i].items)return;
+ data[i].items[key]=Math.max(0,(data[i].items[key]||0)+d);
+ save();
+}
+function removeItem(i){data.splice(i,1);save();}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function render(){
+ let out='',total=0;
+ data.forEach((x,i)=>{
+  const entries=Object.entries(x.items||{}).filter(([k,q])=>q>0);
+  if(!entries.length)return;
+  out+=`<div class="card"><div class="jersey">${esc(x.name)}</div>`;
+  entries.forEach(([key,q])=>{
+   const [s,c]=key.split('|'); total+=q;
+   const safeKey=encodeURIComponent(key);
+   out+=`<div class="size"><span class="size-label">${esc(s)} / ${esc(c)}</span><button class="small" onclick="change(${i},decodeURIComponent('${safeKey}'),-1)">−</button><span class="qty">${q}</span><button class="small" onclick="change(${i},decodeURIComponent('${safeKey}'),1)">+</button></div>`;
+  });
+  out+=`<button class="remove" onclick="removeItem(${i})">Remove jersey</button></div>`;
+ });
+ document.getElementById('list').innerHTML=out||'<div class="empty">No jerseys added yet.</div>';
+ document.getElementById('total').textContent=total;
+}
+document.getElementById('addButton').addEventListener('click',add);
+render();
+</script>
+</body>
+</html>
